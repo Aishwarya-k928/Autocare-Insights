@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AutoCare Plus | Insights</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{ background:#f1f5f9; font-family:Segoe UI }
+h2{text-align:center}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:20px; padding:30px
+}
+.card{
+  background:white;
+  padding:24px;
+  border-radius:18px;
+  box-shadow:0 12px 30px rgba(0,0,0,.1)
+}
+</style>
+</head>
+
+<body>
+
+<h2>📊 Service Insights</h2>
+
+<div class="grid">
+  <div class="card" id="workload"></div>
+  <div class="card" id="completed"></div>
+  <div class="card" id="avgtime"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot }
+from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD9cPmUCMEtT7XukcAxmeS50jKh1A2f31Q",
+  authDomain: "auto-care-plus-e7fdf.firebaseapp.com",
+  projectId: "auto-care-plus-e7fdf",
+  storageBucket: "auto-care-plus-e7fdf.firebasestorage.app",
+  messagingSenderId: "746107164946",
+  appId: "1:746107164946:web:5951433bf11f0cadedfbcb"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+onSnapshot(collection(db,"jobs"), snap=>{
+  let stages={}, done=0, total=0;
+
+  snap.forEach(d=>{
+    const j=d.data();
+    stages[j.status]=(stages[j.status]||0)+1;
+
+    if(j.completedAt && j.createdAt){
+      done++;
+      total += j.completedAt.seconds - j.createdAt.seconds;
+    }
+  });
+
+  workload.innerHTML = `<h3>🚦 Workload</h3>` +
+    Object.entries(stages).map(([k,v])=>`${k}: ${v}`).join("<br>") +
+    `<p>🕒 ${new Date().toLocaleString()}</p>`;
+
+  completed.innerHTML = `<h3>✅ Completed Jobs</h3><h1>${done}</h1>`;
+
+  avgtime.innerHTML = `<h3>⏱ Avg Turnaround</h3>
+    <h1>${done?Math.round(total/done/60):0} mins</h1>`;
+});
+</script>
+</body>
+</html>
