@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AutoCare Plus | Staff</title>
+<title>AutoCare Plus | Insights</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-/* ===== THEME VARIABLES ===== */
 :root{
   --bg:#0b1020;
   --card:#0f172a;
   --border:rgba(255,255,255,.06);
   --text:#fff;
   --muted:#9ca3af;
-  --accent:#22c55e;
 }
 body.light{
   --bg:#f8fafc;
@@ -21,10 +21,8 @@ body.light{
   --border:#e5e7eb;
   --text:#020617;
   --muted:#64748b;
-  --accent:#16a34a;
 }
 
-html,body{height:100%}
 body{
   margin:0;
   background:var(--bg);
@@ -33,18 +31,12 @@ body{
   transition:.3s;
 }
 
-/* ===== HEADER ===== */
+/* Header */
 .header{
   display:flex;
   justify-content:space-between;
   align-items:center;
   padding:16px 22px;
-}
-.brand{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  font-weight:600;
 }
 .toggle{
   cursor:pointer;
@@ -54,60 +46,53 @@ body{
   border:1px solid var(--border);
 }
 
-/* ===== BOARD ===== */
-.board{
-  display:flex;
-  gap:14px;
-  padding:18px;
+/* Grid */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:18px;
+  padding:20px;
 }
-.col{
-  flex:1;
+.card{
   background:var(--card);
   border-radius:16px;
-  padding:14px;
+  padding:16px;
   border:1px solid var(--border);
 }
-.col h3{
-  margin:0 0 10px;
+.card h3{
+  margin:0 0 12px;
   font-size:14px;
   color:var(--muted);
 }
-.job{
-  background:rgba(2,6,23,.6);
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:8px;
+.big{
+  font-size:28px;
+  font-weight:700;
 }
-body.light .job{background:#f1f5f9}
-button{
-  width:100%;
-  margin-top:6px;
-  height:32px;
-  border:none;
-  border-radius:8px;
-  background:var(--accent);
-  font-weight:600;
-  cursor:pointer;
-}
-small{color:var(--muted)}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <div class="brand">🔧 AutoCare Plus – Staff</div>
+  <div>📊 AutoCare Plus – Insights</div>
   <div class="toggle" id="toggle">🌙</div>
 </div>
 
-<div class="board" id="board"></div>
+<div class="grid">
+  <div class="card"><h3>Jobs by Stage</h3><canvas id="stageChart"></canvas></div>
+  <div class="card"><h3>Completed vs Pending</h3><canvas id="doneChart"></canvas></div>
+  <div class="card">
+    <h3>Weekly Labour Utilization</h3>
+    <div class="big" id="labourPercent">0%</div>
+    <small>Avg working time vs standard 8 hrs/day</small>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, updateDoc, doc, serverTimestamp }
+import { getFirestore, collection, onSnapshot }
 from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* Firebase */
 const app = initializeApp({
   apiKey: "AIzaSyD9cPmUCMEtT7XukcAxmeS50jKh1A2f31Q",
   authDomain: "auto-care-plus-e7fdf.firebaseapp.com",
@@ -115,42 +100,53 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 
-/* Board */
-const stages=["NEW","INSPECTION","REPAIR","QUALITY_CHECK","READY"];
-board.innerHTML = stages.map(s=>`
-  <div class="col">
-    <h3>${s}</h3>
-    <div id="${s}"></div>
-  </div>
-`).join("");
+/* Charts */
+const stageCtx=document.getElementById("stageChart");
+const doneCtx=document.getElementById("doneChart");
 
-onSnapshot(collection(db,"jobs"),snap=>{
-  stages.forEach(s=>document.getElementById(s).innerHTML="");
-  snap.forEach(d=>{
-    const j=d.data();
-    const div=document.createElement("div");
-    div.className="job";
-    div.innerHTML=`
-      <b>${j.vehicleNumber}</b><br>
-      <small>${j.customerName}</small>
-      ${j.status!=="READY"?
-        `<button onclick="next('${d.id}','${j.status}')">Next</button>`:""}
-    `;
-    document.getElementById(j.status).appendChild(div);
-  });
+let stageChart=new Chart(stageCtx,{
+  type:"bar",
+  data:{labels:[],datasets:[{data:[],backgroundColor:"#22c55e"}]},
+  options:{plugins:{legend:{display:false}}}
 });
 
-window.next=async(id,status)=>{
-  const i=stages.indexOf(status);
-  if(i<stages.length-1){
-    await updateDoc(doc(db,"jobs",id),{
-      status:stages[i+1],
-      completedAt:stages[i+1]==="READY"?serverTimestamp():null
-    });
+let doneChart=new Chart(doneCtx,{
+  type:"doughnut",
+  data:{
+    labels:["Completed","Pending"],
+    datasets:[{data:[0,0],backgroundColor:["#22c55e","#64748b"]}]
   }
-};
+});
 
-/* ===== THEME TOGGLE ===== */
+/* Real-time analytics */
+onSnapshot(collection(db,"jobs"),snap=>{
+  let stage={},done=0,pending=0,totalTime=0,count=0;
+
+  snap.forEach(d=>{
+    const j=d.data();
+    stage[j.status]=(stage[j.status]||0)+1;
+    if(j.status==="READY") done++; else pending++;
+
+    if(j.completedAt && j.createdAt){
+      totalTime += j.completedAt.seconds - j.createdAt.seconds;
+      count++;
+    }
+  });
+
+  stageChart.data.labels=Object.keys(stage);
+  stageChart.data.datasets[0].data=Object.values(stage);
+  stageChart.update();
+
+  doneChart.data.datasets[0].data=[done,pending];
+  doneChart.update();
+
+  // Weekly labour utilization (8 hrs/day = 28800 sec)
+  const avgTime=count?totalTime/count:0;
+  const percent=Math.min(100,Math.round((avgTime/28800)*100));
+  document.getElementById("labourPercent").innerText=percent+"%";
+});
+
+/* Theme toggle */
 const toggle=document.getElementById("toggle");
 const saved=localStorage.getItem("theme");
 if(saved==="light"){document.body.classList.add("light");toggle.textContent="☀️"}
@@ -161,5 +157,6 @@ toggle.onclick=()=>{
   localStorage.setItem("theme",l?"light":"dark");
 };
 </script>
+
 </body>
 </html>
