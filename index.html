@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AutoCare Plus | Insights Command</title>
+    <title>AutoCare Plus Insights</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -11,38 +11,39 @@
             --success: #39ff14; --warning: #f59e0b; --danger: #ff3131; --border: rgba(255, 255, 255, 0.12);
         }
         body { background: var(--bg); color: white; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
-        .header { padding: 20px 40px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(2,6,23,0.9); }
+        .header { padding: 20px 40px; border-bottom: 1px solid var(--border); background: rgba(2,6,23,0.9); }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; padding: 30px; }
         .kpi-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; }
         .kpi-card h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin: 0; }
         .kpi-val { font-size: 36px; font-weight: 800; margin: 15px 0 5px; }
-        .delay-alert { background: rgba(255, 49, 49, 0.1); color: var(--danger); padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; margin-top: 10px; display: none; }
-        .back-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 10px 20px; border-radius: 10px; cursor: pointer; text-decoration: none; font-size: 12px; font-weight: 700; transition: 0.3s; }
-        .back-btn:hover { background: var(--accent); color: black; }
+        
+        /* --- HISTORY TABLE --- */
+        .history-wrap { margin: 0 30px 40px; background: var(--glass); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; }
+        .history-header { padding: 20px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 15px 25px; font-size: 10px; color: var(--accent); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        td { padding: 15px 25px; border-bottom: 1px solid var(--border); font-size: 13px; opacity: 0.9; }
+        .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; background: rgba(57, 255, 20, 0.1); color: var(--success); }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div>
-            <h1 style="margin:0; font-size:22px;">AutoCare Plus Insights</h1>
-            <span style="font-size:9px; color:var(--success);">● COLLECTION VELOCITY ACTIVE</span>
-        </div>
-        <a href="index.html" class="back-btn">Back to Workshop</a>
+        <h1 style="margin:0; font-size:22px;">AutoCare Plus Insights</h1>
+        <span style="font-size:9px; color:var(--success);">● BUSINESS INTELLIGENCE & SERVICE HISTORY</span>
     </div>
 
     <div class="grid">
         <div class="kpi-card">
             <h3>Accomplished Revenue</h3>
-            <div class="kpi-val" id="accomplishedVal">€0</div>
-            <p style="font-size:11px; opacity:0.6;">Value waiting in Ready lane</p>
-            <div id="velocityAlert" class="delay-alert">⚠️ COLLECTION DELAY: <span id="delayCount">0</span> Vehicles > 4hrs</div>
+            <div class="kpi-val" id="accVal">€0</div>
+            <p style="font-size:11px; opacity:0.6;">Finished work in Ready lane</p>
         </div>
 
         <div class="kpi-card">
             <h3>Monthly Forecast</h3>
-            <div class="kpi-val" id="monthlyForecast" style="color:var(--success);">€0</div>
-            <p style="font-size:11px; opacity:0.6;">Projected monthly total</p>
+            <div class="kpi-val" id="forecastVal" style="color:var(--success);">€0</div>
+            <p style="font-size:11px; opacity:0.6;">Projected based on current run-rate</p>
         </div>
 
         <div class="kpi-card">
@@ -52,89 +53,83 @@
         </div>
     </div>
 
-    <div style="padding: 0 30px 30px;">
-        <div class="kpi-card">
-            <h3>Accomplishment Value Trend</h3>
-            <div style="height: 250px;"><canvas id="revenueChart"></canvas></div>
+    <div class="history-wrap">
+        <div class="history-header">
+            <h3 style="font-size:12px; margin:0; color:var(--accent);">COMPLETED SERVICE HISTORY</h3>
+            <input type="text" id="histSearch" placeholder="Search History..." onkeyup="renderHistory()" 
+                   style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:white; padding:8px 15px; border-radius:8px; outline:none; font-size:12px;">
         </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Registration</th>
+                    <th>Customer Name</th>
+                    <th>Service Type</th>
+                    <th>Completed Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+        </table>
     </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
     const db = getFirestore(initializeApp({
         apiKey: "AIzaSyD9cPmUCMEtT7XukcAxmeS50jKh1A2f31Q",
         projectId: "auto-care-plus-e7fdf"
     }));
 
-    const PRICING = { GENERAL: 280, MECHANICAL: 450, DIAGNOSTIC: 75 };
-    const MONTHLY_TARGET = 15000;
+    const RATES = { GENERAL: 280, MECHANICAL: 450, DIAGNOSTIC: 75 };
+    let allJobs = [];
 
-    function initChart() {
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        window.revChart = new Chart(ctx, {
-            type: 'bar',
-            data: { 
-                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4 (Est)'], 
-                datasets: [{ 
-                    label: 'Revenue €', 
-                    data: [2800, 3100, 2750, 3400], 
-                    backgroundColor: '#00d2ff',
-                    borderRadius: 8
-                }] 
-            },
-            options: { 
-                maintainAspectRatio: false, 
-                plugins: { legend: { display: false } }, 
-                scales: { 
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#fff' } },
-                    x: { grid: { display: false }, ticks: { color: '#fff' } }
-                } 
-            }
-        });
-    }
-
-    onSnapshot(collection(db, "jobs"), (snap) => {
-        let readyRevenue = 0;
-        let delayedCollections = 0;
-        let totalActiveJobs = 0;
-
-        snap.forEach(d => {
-            const j = d.data();
-            const status = (j.status || "NEW").toUpperCase();
-            
-            if(status === "READY") {
-                readyRevenue += PRICING.GENERAL;
-                
-                // Collection Delay Logic: Ready for > 4 hours
-                if (j.createdAt) {
-                    const readyMins = (new Date() - j.createdAt.toDate()) / 60000;
-                    if (readyMins > 240) delayedCollections++;
-                }
-            }
-            if(status !== "COLLECTED") totalActiveJobs++;
-        });
-
-        const dailyAvg = (totalActiveJobs * 280) / 7;
-        const projectedMonthly = Math.round(dailyAvg * 30);
-        const achievement = Math.round((projectedMonthly / MONTHLY_TARGET) * 100);
-
-        document.getElementById("accomplishedVal").innerText = "€" + readyRevenue.toLocaleString();
-        document.getElementById("monthlyForecast").innerText = "€" + projectedMonthly.toLocaleString();
-        document.getElementById("targetPerc").innerText = achievement + "%";
-
-        // Handle Alerts
-        const alertBox = document.getElementById("velocityAlert");
-        if (delayedCollections > 0) {
-            alertBox.style.display = "block";
-            document.getElementById("delayCount").innerText = delayedCollections;
-        } else {
-            alertBox.style.display = "none";
-        }
+    onSnapshot(query(collection(db, "jobs"), orderBy("createdAt", "desc")), (snap) => {
+        allJobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateMetrics();
+        renderHistory();
     });
 
-    initChart();
+    function updateMetrics() {
+        let accRevenue = 0;
+        let activeCount = 0;
+
+        allJobs.forEach(j => {
+            const status = (j.status || "NEW").toUpperCase();
+            if(status === "READY") accRevenue += RATES.GENERAL;
+            if(status !== "COLLECTED") activeCount++;
+        });
+
+        const dailyAvg = (activeCount * 280) / 7;
+        const projected = Math.round(dailyAvg * 30);
+
+        document.getElementById("accVal").innerText = "€" + accRevenue.toLocaleString();
+        document.getElementById("forecastVal").innerText = "€" + projected.toLocaleString();
+        document.getElementById("targetPerc").innerText = Math.round((projected / 15000) * 100) + "%";
+    }
+
+    window.renderHistory = () => {
+        const q = document.getElementById("histSearch").value.toLowerCase();
+        const tbody = document.getElementById("historyTable");
+        tbody.innerHTML = "";
+
+        allJobs.filter(j => 
+            (j.status || "").toUpperCase() === "COLLECTED" && 
+            (j.vehicleNumber || "").toLowerCase().includes(q)
+        ).forEach(job => {
+            const date = job.createdAt ? job.createdAt.toDate().toLocaleDateString() : "N/A";
+            tbody.innerHTML += `
+                <tr>
+                    <td style="color:var(--accent); font-weight:800;">${job.vehicleNumber}</td>
+                    <td>${job.customerName}</td>
+                    <td>${job.serviceType}</td>
+                    <td>${date}</td>
+                    <td><span class="status-pill">COMPLETED</span></td>
+                </tr>
+            `;
+        });
+    }
 </script>
 </body>
 </html>
