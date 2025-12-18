@@ -5,12 +5,15 @@
     <title>AutoCare Plus | Command Center Insights</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         :root {
             --accent-cyan: #00d2ff;
             --accent-green: #10b981;
-            --glass: rgba(15, 23, 42, 0.8);
+            --glass: rgba(15, 23, 42, 0.85);
             --border: rgba(255, 255, 255, 0.1);
         }
 
@@ -19,150 +22,94 @@
         body, html {
             margin: 0; padding: 0; height: 100%;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #020617;
-            color: white;
-            overflow: hidden;
+            background-color: #020617; color: white; overflow: hidden;
         }
 
-        /* 1. ANIMATED BACKGROUND ELEMENTS (Matching Login) */
-        .hero-bg {
-            position: fixed; inset: 0;
-            background: linear-gradient(to bottom, rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.9)),
-                url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
-            z-index: -3;
-        }
+        /* BACKGROUND ELEMENTS */
+        .hero-bg { position: fixed; inset: 0; z-index: -3; background: linear-gradient(rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.9)), url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop') center/cover; }
+        .circuits { position: fixed; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 80px 80px; opacity: 0.2; z-index: -2; animation: circuitFlow 15s linear infinite; }
+        @keyframes circuitFlow { from { background-position: 0 0; } to { background-position: 80px 80px; } }
 
-        .circuits {
-            position: fixed; inset: 0;
-            background-image: 
-                linear-gradient(var(--border) 1px, transparent 1px),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px);
-            background-size: 80px 80px;
-            mask-image: radial-gradient(circle, black, transparent 90%);
-            opacity: 0.2;
-            z-index: -2;
-            animation: circuitFlow 15s linear infinite;
-        }
+        .main-container { height: 100vh; display: flex; flex-direction: column; align-items: center; padding-top: 3vh; gap: 20px; }
 
-        @keyframes circuitFlow {
-            from { background-position: 0 0; }
-            to { background-position: 80px 80px; }
-        }
-
-        /* 2. RACING LAYER (The "Live Load" Visual) */
-        .road {
-            position: fixed; bottom: 0; width: 400%; height: 35%;
-            background: repeating-linear-gradient(90deg, #111 0, #111 60px, #334155 60px, #334155 120px);
-            opacity: 0.2; z-index: -1;
-        }
-
-        .car { position: fixed; bottom: 12%; font-size: 50px; z-index: -1; }
-
-        @keyframes drive {
-            0% { transform: translateX(-20vw) scaleX(1); }
-            45% { transform: translateX(120vw) scaleX(1); }
-            50% { transform: translateX(120vw) scaleX(-1); }
-            95% { transform: translateX(-20vw) scaleX(-1); }
-            100% { transform: translateX(-20vw) scaleX(1); }
-        }
-
-        /* 3. INSIGHTS DASHBOARD (Matching Login Glass Bar) */
-        .main-container {
-            height: 100vh;
-            display: flex; flex-direction: column; align-items: center;
-            padding-top: 5vh; gap: 30px;
-        }
-
+        /* HEADER BAR */
         .header-bar {
-            width: 90%; max-width: 1100px;
-            background: var(--glass);
-            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 25px 40px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+            width: 90%; max-width: 1100px; background: var(--glass); backdrop-filter: blur(25px);
+            border: 1px solid var(--border); border-radius: 20px; padding: 20px 40px;
+            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 40px 100px rgba(0,0,0,0.6);
         }
 
         .brand-section { border-left: 4px solid var(--accent-cyan); padding-left: 20px; }
-        .brand-section h1 { font-size: 32px; margin: 0; font-weight: 700; letter-spacing: -1px; }
-        .brand-section p { font-size: 12px; color: var(--accent-cyan); margin: 3px 0 0; text-transform: uppercase; letter-spacing: 2px; }
+        .brand-section h1 { font-size: 28px; margin: 0; }
+        .brand-section p { font-size: 11px; color: var(--accent-cyan); margin: 0; text-transform: uppercase; letter-spacing: 2px; }
 
-        .sync-indicator { font-size: 12px; color: var(--accent-green); font-weight: 700; text-shadow: 0 0 10px var(--accent-green); }
+        /* PDF BUTTON */
+        .pdf-btn {
+            background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent-cyan);
+            color: white; padding: 10px 20px; border-radius: 10px; cursor: pointer;
+            font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .pdf-btn:hover { background: var(--accent-cyan); color: #020617; box-shadow: 0 0 20px rgba(0, 210, 255, 0.4); }
 
         /* DATA GRID */
-        .insights-grid {
+        #report-content {
             width: 90%; max-width: 1100px;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+            display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px;
         }
 
         .insight-card {
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
+            background: var(--glass); backdrop-filter: blur(15px);
+            border: 1px solid var(--border); border-radius: 20px; padding: 25px;
+            display: flex; flex-direction: column; justify-content: center;
         }
 
-        .insight-card h3 { 
-            margin: 0; font-size: 14px; text-transform: uppercase; 
-            letter-spacing: 2px; color: var(--accent-cyan); 
-        }
+        .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-cyan); margin-bottom: 15px; }
+        .value { font-size: 42px; font-weight: 700; color: white; }
+        .chart-container { height: 200px; width: 100%; position: relative; }
 
-        .insight-card .value { font-size: 48px; font-weight: 700; margin: 15px 0; display: block; }
-        .insight-card .status { font-size: 12px; opacity: 0.6; }
-
-        .workload-list { text-align: left; font-size: 14px; margin-top: 10px; line-height: 1.8; }
+        .workload-list { font-size: 13px; line-height: 2; }
         .workload-list b { color: var(--accent-cyan); }
-
     </style>
 </head>
 <body>
 
 <div class="hero-bg"></div>
 <div class="circuits"></div>
-<div class="road" id="road"></div>
-
-<div class="car car1" id="c1">🏎️</div>
-<div class="car car2" id="c2">🚗</div>
-<div class="car car3" id="c3">🚙</div>
 
 <div class="main-container">
     <div class="header-bar">
         <div class="brand-section">
-            <h1>Service Insights</h1>
-            <p>Predictive Intelligence Terminal</p>
+            <h1>Predictive Analytics</h1>
+            <p>Operational Intelligence HUD</p>
         </div>
-        <div class="sync-indicator">● LIVE CLOUD FEED</div>
+        <button class="pdf-btn" id="downloadPdf">Export PDF Report</button>
     </div>
 
-    <div class="insights-grid">
+    <div id="report-content">
         <div class="insight-card">
-            <h3>Active Workload</h3>
-            <div class="workload-list" id="workload">Initializing...</div>
+            <div class="card-title">Live Workload</div>
+            <div id="workload" class="workload-list">Connecting...</div>
         </div>
 
         <div class="insight-card">
-            <h3>Completed (24h)</h3>
-            <span class="value" id="completed">0</span>
-            <span class="status">Jobs Finalized</span>
+            <div class="card-title">Service Volume Trend</div>
+            <div class="chart-container">
+                <canvas id="serviceChart"></canvas>
+            </div>
         </div>
 
-        <div class="insight-card">
-            <h3>Avg Turnaround</h3>
-            <span class="value" id="avgtime">0 <small style="font-size: 18px">min</small></span>
-            <span class="status">Efficiency Rating</span>
+        <div class="insight-card" style="text-align: center;">
+            <div class="card-title">Avg Turnaround</div>
+            <div class="value" id="avgtime">--</div>
+            <div style="font-size: 11px; opacity: 0.5;">MINUTES PER UNIT</div>
         </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot }
-    from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-    /* FIREBASE CONFIG (Matching Login) */
     const app = initializeApp({
         apiKey: "AIzaSyD9cPmUCMEtT7XukcAxmeS50jKh1A2f31Q",
         authDomain: "auto-care-plus-e7fdf.firebaseapp.com",
@@ -173,57 +120,72 @@
     });
     const db = getFirestore(app);
 
-    const workloadEl = document.getElementById("workload");
-    const completedEl = document.getElementById("completed");
-    const avgtimeEl = document.getElementById("avgtime");
-
-    /* REAL-TIME DATA ENGINE */
-    onSnapshot(collection(db, "jobs"), snap => {
-        let stats = {}, doneCount = 0, totalSeconds = 0, activeCount = 0;
-
-        snap.forEach(doc => {
-            const data = doc.data();
-            stats[data.status] = (stats[data.status] || 0) + 1;
-            
-            if (["REPAIR", "DIAGNOSTICS", "QUALITY_CHECK"].includes(data.status)) {
-                activeCount++;
+    // Chart Setup
+    const ctx = document.getElementById('serviceChart').getContext('2d');
+    const serviceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+            datasets: [{
+                label: 'Orders',
+                data: [0, 0, 0, 0, 0, 0],
+                borderColor: '#00d2ff',
+                backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
             }
-
-            if (data.completedAt && data.createdAt) {
-                doneCount++;
-                totalSeconds += (data.completedAt.seconds - data.createdAt.seconds);
-            }
-        });
-
-        // Update UI Cards
-        workloadEl.innerHTML = Object.entries(stats)
-            .map(([k, v]) => `<div><b>${k}:</b> ${v}</div>`).join("");
-        
-        completedEl.innerText = doneCount;
-        avgtimeEl.innerHTML = `${doneCount ? Math.round(totalSeconds/doneCount/60) : 0} <small style="font-size: 18px">min</small>`;
-
-        // Dynamic Background Speed (More jobs = Slower cars)
-        updateSpeed(activeCount);
+        }
     });
 
-    /* SPEED ENGINE */
-    function updateSpeed(load) {
-        const baseSpeed = Math.max(4, 16 - load);
-        const cars = [document.getElementById("c1"), document.getElementById("c2"), document.getElementById("c3")];
-        const road = document.getElementById("road");
+    // Firebase Sync
+    onSnapshot(collection(db, "jobs"), snap => {
+        let stats = {}, done = 0, totalSec = 0, hourlyData = new Array(6).fill(0);
 
-        cars.forEach((c, i) => {
-            c.style.animation = `drive ${baseSpeed + i * 2}s linear infinite`;
+        snap.forEach(doc => {
+            const j = doc.data();
+            stats[j.status] = (stats[j.status] || 0) + 1;
+            if(j.completedAt && j.createdAt) {
+                done++;
+                totalSec += (j.completedAt.seconds - j.createdAt.seconds);
+            }
+            const hour = j.createdAt ? new Date(j.createdAt.seconds * 1000).getHours() : 0;
+            if(hour >= 8 && hour <= 18) hourlyData[Math.floor((hour-8)/2)]++;
         });
-        road.style.animation = `roadMove ${baseSpeed / 4}s linear infinite`;
-    }
 
-    // Road animation style
-    const style = document.createElement("style");
-    style.innerHTML = `@keyframes roadMove { to { transform: translateX(-50%); } }`;
-    document.head.appendChild(style);
+        document.getElementById("workload").innerHTML = Object.entries(stats)
+            .map(([k, v]) => `<div><b>${k}:</b> ${v}</div>`).join("");
+        document.getElementById("avgtime").innerText = done ? Math.round(totalSec/done/60) : "--";
+        serviceChart.data.datasets[0].data = hourlyData;
+        serviceChart.update();
+    });
 
+    /* PDF EXPORT LOGIC */
+    document.getElementById('downloadPdf').addEventListener('click', () => {
+        const element = document.getElementById('report-content');
+        const opt = {
+            margin:       10,
+            filename:     'AutoCare_Insights_Report.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, backgroundColor: '#020617' },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+        
+        // Temporarily adjust padding for PDF look
+        element.style.padding = "20px";
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.style.padding = "0px";
+        });
+    });
 </script>
-
 </body>
 </html>
