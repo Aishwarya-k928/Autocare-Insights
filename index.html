@@ -2,130 +2,133 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AutoCare Plus | Insights Terminal</title>
+    <title>AutoCare Plus | Insights HUD</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         :root {
-            --accent-cyan: #00d2ff;
-            --glass: rgba(15, 23, 42, 0.7);
-            --border: rgba(255, 255, 255, 0.1);
+            --accent: #00d2ff;
+            --glass: rgba(10, 15, 28, 0.75);
+            --border: rgba(255, 255, 255, 0.12);
         }
 
-        * { box-sizing: border-box; transition: all 0.3s ease; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body, html {
-            margin: 0; padding: 0; height: 100%;
+            height: 100%; width: 100%;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #020617; color: white;
-            overflow: hidden; display: flex; align-items: center; justify-content: center;
+            background-color: #020617;
+            color: white; overflow: hidden;
         }
 
-        /* 1. DYNAMIC BACKGROUND & CIRCUITRY */
-        .hero-bg {
-            position: fixed; inset: 0; z-index: -2;
-            background: linear-gradient(rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.9)),
-                url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop') center/cover;
+        /* 1. THE STRETCHED BACKGROUND */
+        .stage {
+            position: relative;
+            height: 100vh; width: 100vw;
+            display: flex; align-items: center; justify-content: center;
+            background: 
+                linear-gradient(rgba(2, 6, 23, 0.5), rgba(2, 6, 23, 0.8)),
+                url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
         }
 
+        /* 2. THE CIRCUIT OVERLAY */
         .circuits {
-            position: fixed; inset: 0; z-index: -1;
-            background-image: linear-gradient(var(--border) 1px, transparent 1px),
-                              linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            position: absolute; inset: 0;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
             background-size: 100px 100px;
-            mask-image: radial-gradient(circle, black, transparent 80%);
-            opacity: 0.3; animation: flow 20s linear infinite;
+            mask-image: radial-gradient(circle, black, transparent 85%);
+            opacity: 0.3; pointer-events: none;
         }
-        @keyframes flow { from { background-position: 0 0; } to { background-position: 100px 100px; } }
 
-        /* 2. MAIN HORIZONTAL HUD (Exact Image Match) */
-        .main-hud {
-            width: 95%; max-width: 1150px;
+        /* 3. THE MAIN GLASS PANEL (Matches your generated image) */
+        .hud-panel {
+            position: relative;
+            width: 90%; max-width: 1100px;
             background: var(--glass);
-            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
             border: 1px solid var(--border);
-            border-radius: 24px; padding: 40px 60px;
-            display: grid; grid-template-columns: 1.5fr 2fr;
-            align-items: center; gap: 40px;
-            box-shadow: 0 50px 100px rgba(0,0,0,0.6);
+            border-radius: 24px;
+            padding: 50px 70px;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 50px;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.7);
         }
 
-        .branding-zone h1 {
-            font-size: 56px; margin: 0; font-weight: 700; letter-spacing: -3px;
-            line-height: 1;
-        }
-        .branding-zone p {
-            font-size: 14px; color: var(--accent-cyan); margin: 10px 0 0;
-            text-transform: uppercase; letter-spacing: 4px; font-weight: 600;
+        .branding h1 {
+            font-size: 64px; font-weight: 700;
+            letter-spacing: -3px; line-height: 1;
+            margin-bottom: 10px;
         }
 
-        /* INTEGRATED CHART HUD */
-        .chart-hud {
-            height: 120px; position: relative;
+        .branding p {
+            font-size: 14px; color: var(--accent);
+            text-transform: uppercase; letter-spacing: 4px;
+            font-weight: 600; opacity: 0.9;
+        }
+
+        /* 4. DATA VISUALIZATION AREA */
+        .data-viz {
             border-left: 1px solid var(--border);
-            padding-left: 40px;
+            padding-left: 50px;
+            display: flex; flex-direction: column; justify-content: center;
         }
 
-        /* 3. SUBTLE DATA STRIP (Stats) */
-        .data-strip {
-            position: absolute; bottom: -80px; width: 100%;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+        .chart-wrap { height: 120px; width: 100%; margin-bottom: 20px; }
+        
+        .stats-row {
+            display: flex; justify-content: space-between;
+            margin-top: 10px; border-top: 1px solid var(--border);
+            padding-top: 20px;
         }
 
-        .stat-item {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            border-radius: 15px; padding: 15px 25px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .stat-label { font-size: 11px; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { font-size: 20px; font-weight: 700; }
+        .stat-box { text-align: left; }
+        .stat-label { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; }
+        .stat-num { font-size: 24px; font-weight: 700; display: block; }
 
-        /* EXPORT BUTTON */
+        /* Action Button */
         .export-btn {
             position: absolute; top: -60px; right: 0;
-            background: transparent; border: 1px solid var(--accent-cyan);
-            color: var(--accent-cyan); padding: 8px 16px; border-radius: 8px;
-            cursor: pointer; font-size: 11px; font-weight: 700;
+            background: transparent; border: 1px solid var(--accent);
+            color: var(--accent); padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 12px; font-weight: 700;
         }
-        .export-btn:hover { background: var(--accent-cyan); color: #020617; }
-
     </style>
 </head>
 <body>
 
-<div class="hero-bg"></div>
-<div class="circuits"></div>
-
-<div style="position: relative;">
-    <button class="export-btn" id="downloadPdf">DOWNLOAD DATA REPORT (.PDF)</button>
+<div class="stage">
+    <div class="circuits"></div>
     
-    <div class="main-hud" id="report-content">
-        <div class="branding-zone">
-            <h1>AutoCare Plus</h1>
-            <p>Service Insights Terminal</p>
-        </div>
+    <div style="position: relative; width: 90%; max-width: 1100px;">
+        <button class="export-btn" id="export">EXPORT ANALYTICS .PDF</button>
 
-        <div class="chart-hud">
-            <canvas id="serviceChart"></canvas>
-        </div>
+        <div class="hud-panel">
+            <div class="branding">
+                <h1>AutoCare Plus</h1>
+                <p>Professional Insights HUD</p>
+            </div>
 
-        <div class="data-strip">
-            <div class="stat-item">
-                <span class="stat-label">Efficiency</span>
-                <span class="stat-value" id="avgtime">0m</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Load Level</span>
-                <span class="stat-value" id="workload">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Daily Output</span>
-                <span class="stat-value" id="completed">0</span>
+            <div class="data-viz">
+                <div class="chart-wrap">
+                    <canvas id="liveChart"></canvas>
+                </div>
+                
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <span class="stat-label">Efficiency</span>
+                        <span class="stat-num" id="speed">0m</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Active Jobs</span>
+                        <span class="stat-num" id="total">0</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -145,60 +148,50 @@
     });
     const db = getFirestore(app);
 
-    // Chart.js Configuration to look like a HUD readout
-    const ctx = document.getElementById('serviceChart').getContext('2d');
-    const serviceChart = new Chart(ctx, {
+    // Chart Setup
+    const ctx = document.getElementById('liveChart').getContext('2d');
+    const chart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+            labels: ['', '', '', '', '', ''],
             datasets: [{
-                data: [5, 12, 8, 20, 15, 25],
+                data: [0, 0, 0, 0, 0, 0],
                 borderColor: '#00d2ff',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
                 backgroundColor: 'rgba(0, 210, 255, 0.05)',
-                fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0
+                pointRadius: 0
             }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: {
-                x: { ticks: { display: false }, grid: { display: false } },
-                y: { ticks: { display: false }, grid: { color: 'rgba(255,255,255,0.05)' } }
-            }
+            scales: { x: { display: false }, y: { display: false } }
         }
     });
 
-    // Firebase Sync
+    // Firebase Data Sync
     onSnapshot(collection(db, "jobs"), snap => {
-        let done = 0, totalSec = 0, hourly = new Array(6).fill(0);
+        let done = 0, time = 0, points = [0, 0, 0, 0, 0, 0];
         
         snap.forEach(doc => {
-            const j = doc.data();
-            if(j.completedAt && j.createdAt) {
+            const data = doc.data();
+            if(data.completedAt && data.createdAt) {
                 done++;
-                totalSec += (j.completedAt.seconds - j.createdAt.seconds);
+                time += (data.completedAt.seconds - data.createdAt.seconds);
             }
-            const hour = j.createdAt ? new Date(j.createdAt.seconds * 1000).getHours() : 0;
-            if(hour >= 8 && hour <= 18) hourly[Math.floor((hour-8)/2)]++;
+            // Logic for dummy graph movement based on data
+            points.push(snap.size % 20); points.shift();
         });
 
-        document.getElementById("workload").innerText = snap.size;
-        document.getElementById("completed").innerText = done;
-        document.getElementById("avgtime").innerText = (done ? Math.round(totalSec/done/60) : 0) + "m";
+        document.getElementById("total").innerText = snap.size;
+        document.getElementById("speed").innerText = (done ? Math.round(time/done/60) : 0) + "m";
         
-        serviceChart.data.datasets[0].data = hourly;
-        serviceChart.update();
-    });
-
-    // PDF Export
-    document.getElementById('downloadPdf').addEventListener('click', () => {
-        const element = document.getElementById('report-content');
-        html2pdf().set({
-            margin: 10, filename: 'AutoCare_Insights.pdf',
-            html2canvas: { scale: 2, backgroundColor: '#020617' },
-            jsPDF: { orientation: 'landscape' }
-        }).from(element).save();
+        chart.data.datasets[0].data = points;
+        chart.update();
     });
 </script>
+
 </body>
 </html>
