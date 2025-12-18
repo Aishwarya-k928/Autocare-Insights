@@ -2,18 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AutoCare Plus | Command Center Insights</title>
+    <title>AutoCare Plus | Insights Terminal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         :root {
             --accent-cyan: #00d2ff;
-            --accent-green: #10b981;
-            --glass: rgba(15, 23, 42, 0.85);
+            --glass: rgba(15, 23, 42, 0.7);
             --border: rgba(255, 255, 255, 0.1);
         }
 
@@ -22,53 +20,80 @@
         body, html {
             margin: 0; padding: 0; height: 100%;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #020617; color: white; overflow: hidden;
+            background-color: #020617; color: white;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
 
-        /* BACKGROUND ELEMENTS */
-        .hero-bg { position: fixed; inset: 0; z-index: -3; background: linear-gradient(rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.9)), url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop') center/cover; }
-        .circuits { position: fixed; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 80px 80px; opacity: 0.2; z-index: -2; animation: circuitFlow 15s linear infinite; }
-        @keyframes circuitFlow { from { background-position: 0 0; } to { background-position: 80px 80px; } }
-
-        .main-container { height: 100vh; display: flex; flex-direction: column; align-items: center; padding-top: 3vh; gap: 20px; }
-
-        /* HEADER BAR */
-        .header-bar {
-            width: 90%; max-width: 1100px; background: var(--glass); backdrop-filter: blur(25px);
-            border: 1px solid var(--border); border-radius: 20px; padding: 20px 40px;
-            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+        /* 1. DYNAMIC BACKGROUND & CIRCUITRY */
+        .hero-bg {
+            position: fixed; inset: 0; z-index: -2;
+            background: linear-gradient(rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.9)),
+                url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop') center/cover;
         }
 
-        .brand-section { border-left: 4px solid var(--accent-cyan); padding-left: 20px; }
-        .brand-section h1 { font-size: 28px; margin: 0; }
-        .brand-section p { font-size: 11px; color: var(--accent-cyan); margin: 0; text-transform: uppercase; letter-spacing: 2px; }
-
-        /* PDF BUTTON */
-        .pdf-btn {
-            background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent-cyan);
-            color: white; padding: 10px 20px; border-radius: 10px; cursor: pointer;
-            font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+        .circuits {
+            position: fixed; inset: 0; z-index: -1;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 100px 100px;
+            mask-image: radial-gradient(circle, black, transparent 80%);
+            opacity: 0.3; animation: flow 20s linear infinite;
         }
-        .pdf-btn:hover { background: var(--accent-cyan); color: #020617; box-shadow: 0 0 20px rgba(0, 210, 255, 0.4); }
+        @keyframes flow { from { background-position: 0 0; } to { background-position: 100px 100px; } }
 
-        /* DATA GRID */
-        #report-content {
-            width: 90%; max-width: 1100px;
-            display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px;
-        }
-
-        .insight-card {
-            background: var(--glass); backdrop-filter: blur(15px);
-            border: 1px solid var(--border); border-radius: 20px; padding: 25px;
-            display: flex; flex-direction: column; justify-content: center;
+        /* 2. MAIN HORIZONTAL HUD (Exact Image Match) */
+        .main-hud {
+            width: 95%; max-width: 1150px;
+            background: var(--glass);
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--border);
+            border-radius: 24px; padding: 40px 60px;
+            display: grid; grid-template-columns: 1.5fr 2fr;
+            align-items: center; gap: 40px;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.6);
         }
 
-        .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-cyan); margin-bottom: 15px; }
-        .value { font-size: 42px; font-weight: 700; color: white; }
-        .chart-container { height: 200px; width: 100%; position: relative; }
+        .branding-zone h1 {
+            font-size: 56px; margin: 0; font-weight: 700; letter-spacing: -3px;
+            line-height: 1;
+        }
+        .branding-zone p {
+            font-size: 14px; color: var(--accent-cyan); margin: 10px 0 0;
+            text-transform: uppercase; letter-spacing: 4px; font-weight: 600;
+        }
 
-        .workload-list { font-size: 13px; line-height: 2; }
-        .workload-list b { color: var(--accent-cyan); }
+        /* INTEGRATED CHART HUD */
+        .chart-hud {
+            height: 120px; position: relative;
+            border-left: 1px solid var(--border);
+            padding-left: 40px;
+        }
+
+        /* 3. SUBTLE DATA STRIP (Stats) */
+        .data-strip {
+            position: absolute; bottom: -80px; width: 100%;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+        }
+
+        .stat-item {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 15px; padding: 15px 25px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .stat-label { font-size: 11px; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-size: 20px; font-weight: 700; }
+
+        /* EXPORT BUTTON */
+        .export-btn {
+            position: absolute; top: -60px; right: 0;
+            background: transparent; border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan); padding: 8px 16px; border-radius: 8px;
+            cursor: pointer; font-size: 11px; font-weight: 700;
+        }
+        .export-btn:hover { background: var(--accent-cyan); color: #020617; }
+
     </style>
 </head>
 <body>
@@ -76,32 +101,32 @@
 <div class="hero-bg"></div>
 <div class="circuits"></div>
 
-<div class="main-container">
-    <div class="header-bar">
-        <div class="brand-section">
-            <h1>Predictive Analytics</h1>
-            <p>Operational Intelligence HUD</p>
-        </div>
-        <button class="pdf-btn" id="downloadPdf">Export PDF Report</button>
-    </div>
-
-    <div id="report-content">
-        <div class="insight-card">
-            <div class="card-title">Live Workload</div>
-            <div id="workload" class="workload-list">Connecting...</div>
+<div style="position: relative;">
+    <button class="export-btn" id="downloadPdf">DOWNLOAD DATA REPORT (.PDF)</button>
+    
+    <div class="main-hud" id="report-content">
+        <div class="branding-zone">
+            <h1>AutoCare Plus</h1>
+            <p>Service Insights Terminal</p>
         </div>
 
-        <div class="insight-card">
-            <div class="card-title">Service Volume Trend</div>
-            <div class="chart-container">
-                <canvas id="serviceChart"></canvas>
+        <div class="chart-hud">
+            <canvas id="serviceChart"></canvas>
+        </div>
+
+        <div class="data-strip">
+            <div class="stat-item">
+                <span class="stat-label">Efficiency</span>
+                <span class="stat-value" id="avgtime">0m</span>
             </div>
-        </div>
-
-        <div class="insight-card" style="text-align: center;">
-            <div class="card-title">Avg Turnaround</div>
-            <div class="value" id="avgtime">--</div>
-            <div style="font-size: 11px; opacity: 0.5;">MINUTES PER UNIT</div>
+            <div class="stat-item">
+                <span class="stat-label">Load Level</span>
+                <span class="stat-value" id="workload">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Daily Output</span>
+                <span class="stat-value" id="completed">0</span>
+            </div>
         </div>
     </div>
 </div>
@@ -120,71 +145,59 @@
     });
     const db = getFirestore(app);
 
-    // Chart Setup
+    // Chart.js Configuration to look like a HUD readout
     const ctx = document.getElementById('serviceChart').getContext('2d');
     const serviceChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
             datasets: [{
-                label: 'Orders',
-                data: [0, 0, 0, 0, 0, 0],
+                data: [5, 12, 8, 20, 15, 25],
                 borderColor: '#00d2ff',
-                backgroundColor: 'rgba(0, 210, 255, 0.1)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: 3
+                backgroundColor: 'rgba(0, 210, 255, 0.05)',
+                fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
-                y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                x: { ticks: { display: false }, grid: { display: false } },
+                y: { ticks: { display: false }, grid: { color: 'rgba(255,255,255,0.05)' } }
             }
         }
     });
 
     // Firebase Sync
     onSnapshot(collection(db, "jobs"), snap => {
-        let stats = {}, done = 0, totalSec = 0, hourlyData = new Array(6).fill(0);
-
+        let done = 0, totalSec = 0, hourly = new Array(6).fill(0);
+        
         snap.forEach(doc => {
             const j = doc.data();
-            stats[j.status] = (stats[j.status] || 0) + 1;
             if(j.completedAt && j.createdAt) {
                 done++;
                 totalSec += (j.completedAt.seconds - j.createdAt.seconds);
             }
             const hour = j.createdAt ? new Date(j.createdAt.seconds * 1000).getHours() : 0;
-            if(hour >= 8 && hour <= 18) hourlyData[Math.floor((hour-8)/2)]++;
+            if(hour >= 8 && hour <= 18) hourly[Math.floor((hour-8)/2)]++;
         });
 
-        document.getElementById("workload").innerHTML = Object.entries(stats)
-            .map(([k, v]) => `<div><b>${k}:</b> ${v}</div>`).join("");
-        document.getElementById("avgtime").innerText = done ? Math.round(totalSec/done/60) : "--";
-        serviceChart.data.datasets[0].data = hourlyData;
+        document.getElementById("workload").innerText = snap.size;
+        document.getElementById("completed").innerText = done;
+        document.getElementById("avgtime").innerText = (done ? Math.round(totalSec/done/60) : 0) + "m";
+        
+        serviceChart.data.datasets[0].data = hourly;
         serviceChart.update();
     });
 
-    /* PDF EXPORT LOGIC */
+    // PDF Export
     document.getElementById('downloadPdf').addEventListener('click', () => {
         const element = document.getElementById('report-content');
-        const opt = {
-            margin:       10,
-            filename:     'AutoCare_Insights_Report.pdf',
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, backgroundColor: '#020617' },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        };
-        
-        // Temporarily adjust padding for PDF look
-        element.style.padding = "20px";
-        html2pdf().set(opt).from(element).save().then(() => {
-            element.style.padding = "0px";
-        });
+        html2pdf().set({
+            margin: 10, filename: 'AutoCare_Insights.pdf',
+            html2canvas: { scale: 2, backgroundColor: '#020617' },
+            jsPDF: { orientation: 'landscape' }
+        }).from(element).save();
     });
 </script>
 </body>
