@@ -12,12 +12,11 @@
         }
         body { background: var(--bg); color: white; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
         .header { padding: 20px 40px; border-bottom: 1px solid var(--border); background: rgba(2,6,23,0.9); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; padding: 30px; }
         .kpi-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; }
         .kpi-card h3 { font-size: 10px; text-transform: uppercase; color: var(--accent); margin: 0; letter-spacing: 1px; }
         .kpi-val { font-size: 38px; font-weight: 800; margin: 15px 0 5px; }
         
-        /* Efficiency Table Styles */
         .panel-wrap { margin: 0 30px 40px; background: var(--glass); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; }
         .panel-head { padding: 20px 25px; border-bottom: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -30,7 +29,7 @@
 
     <div class="header">
         <h1 style="margin:0; font-size:22px;">AutoCare Plus Insights</h1>
-        <span style="font-size:9px; color:var(--success);">● BUSINESS INTELLIGENCE & WORKLOAD EFFICIENCY</span>
+        <span style="font-size:9px; color:var(--success);">● LIVE INTELLIGENCE FEED</span>
     </div>
 
     <div class="grid">
@@ -54,9 +53,7 @@
     </div>
 
     <div class="panel-wrap">
-        <div class="panel-head">
-            <h3 style="font-size:11px; color:var(--accent);">LANE EFFICIENCY ANALYSIS</h3>
-        </div>
+        <div class="panel-head"><h3 style="font-size:11px; color:var(--accent);">LANE EFFICIENCY ANALYSIS</h3></div>
         <table>
             <thead>
                 <tr>
@@ -71,23 +68,19 @@
     </div>
 
     <div class="panel-wrap">
-        <div class="panel-head">
-            <h3 style="font-size:11px; color:var(--accent);">COMPLETED SERVICE HISTORY</h3>
-        </div>
-        <div id="historyTableContainer">
-             <table>
-                <thead>
-                    <tr>
-                        <th>Registration</th>
-                        <th>Customer Name</th>
-                        <th>Service Type</th>
-                        <th>Completed Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="historyTable"></tbody>
-            </table>
-        </div>
+        <div class="panel-head"><h3 style="font-size:11px; color:var(--accent);">COMPLETED SERVICE HISTORY</h3></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Registration</th>
+                    <th>Customer Name</th>
+                    <th>Service Type</th>
+                    <th>Completed Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+        </table>
     </div>
 
 <script type="module">
@@ -101,7 +94,8 @@
 
     const RATES = { GENERAL: 280, MECHANICAL: 450, DIAGNOSTIC: 75 };
 
-    onSnapshot(query(collection(db, "jobs"), orderBy("createdAt", "desc")), (snap) => {
+    // Force real-time updates by including metadata changes
+    onSnapshot(query(collection(db, "jobs"), orderBy("createdAt", "desc")), { includeMetadataChanges: true }, (snap) => {
         let accRevenue = 0;
         let totalActive = 0;
         let lanes = { NEW: {count:0, val:0}, SERVICING: {count:0, val:0}, READY: {count:0, val:0} };
@@ -111,7 +105,7 @@
             const j = doc.data();
             const status = (j.status || "NEW").toUpperCase();
             
-            // Logic for History
+            // Populate History
             if(status === "COLLECTED") {
                 const date = j.createdAt ? j.createdAt.toDate().toLocaleDateString() : "N/A";
                 historyHtml += `
@@ -123,10 +117,9 @@
                         <td><span style="color:var(--success); font-weight:700;">COMPLETED</span></td>
                     </tr>`;
             } else {
-                // Logic for Efficiency & Metrics
+                // Populate Efficiency
                 totalActive++;
                 if(status === "READY") accRevenue += RATES.GENERAL;
-                
                 if(lanes[status]) {
                     lanes[status].count++;
                     lanes[status].val += RATES.GENERAL;
@@ -134,13 +127,13 @@
             }
         });
 
-        // Update Top Cards
+        // Top Cards Update
         const projected = Math.round(((totalActive * 280) / 7) * 30);
         document.getElementById("accVal").innerText = "€" + accRevenue.toLocaleString();
         document.getElementById("forecastVal").innerText = "€" + projected.toLocaleString();
         document.getElementById("targetPerc").innerText = Math.round((projected / 15000) * 100) + "%";
 
-        // Update Efficiency Table
+        // Table Update
         document.getElementById("efficiencyTable").innerHTML = Object.keys(lanes).map(l => {
             const isHigh = lanes[l].count > 5;
             return `
