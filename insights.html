@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AutoCare Plus | Insights Command</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --accent: #00d2ff;
+            --glass: rgba(10, 15, 28, 0.96);
+            --border: rgba(255, 255, 255, 0.12);
+            --bg: #020617;
+            --success: #10b981;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: var(--bg); color: white; 
+            font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; 
+        }
+
+        /* --- ADMIN LOCK OVERLAY --- */
+        #adminLock { 
+            position: fixed; inset: 0; background: var(--bg); 
+            display: flex; align-items: center; justify-content: center; z-index: 9999; 
+        }
+
+        .auth-card { 
+            background: var(--glass); padding: 40px; border-radius: 28px; 
+            border: 1px solid var(--border); width: 90%; max-width: 350px; text-align: center; 
+        }
+
+        /* --- DASHBOARD STYLES --- */
+        #insightsContent { display: none; padding-bottom: 50px; }
+        
+        .header { 
+            padding: 20px 40px; border-bottom: 1px solid var(--border); 
+            background: rgba(2, 6, 23, 0.9); display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .insights-grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 25px; padding: 30px 40px; 
+        }
+
+        .stat-card { 
+            background: var(--glass); border: 1px solid var(--border); 
+            border-radius: 24px; padding: 25px;
+        }
+
+        .big-val { font-size: 42px; font-weight: 800; margin: 15px 0 5px; color: white; }
+        
+        .table-wrap { margin: 0 40px; background: var(--glass); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 20px; font-size: 11px; color: var(--accent); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        td { padding: 20px; border-bottom: 1px solid var(--border); font-size: 14px; }
+
+        input { width: 100%; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; color: white; margin-bottom: 15px; outline: none; }
+        .btn-nav { background: transparent; border: 1px solid var(--border); color: white; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-size: 11px; }
+        .btn-nav:hover { background: white; color: black; }
+        .btn-auth { width: 100%; background: var(--accent); color: black; border: none; padding: 16px; border-radius: 12px; font-weight: 800; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="adminLock">
+        <div class="auth-card">
+            <h1 style="font-size:22px; margin-bottom:10px;">Admin Insights</h1>
+            <p style="font-size:11px; opacity:0.6; margin-bottom:20px;">Manager Authorization Required</p>
+            <input type="password" id="adminKey" placeholder="Enter Admin Key">
+            <button onclick="unlockInsights()" class="btn-auth">Access Dashboard</button>
+            <p id="error" style="color:#ff3131; font-size:11px; margin-top:10px; display:none;">Invalid Credentials</p>
+        </div>
+    </div>
+
+    <div id="insightsContent">
+        <div class="header">
+            <div>
+                <h1 style="margin:0; font-size:22px;">Revenue Intelligence</h1>
+                <span style="font-size:9px; color:var(--success); font-weight:800;">● LIVE FINANCIAL ENGINE</span>
+            </div>
+            <button onclick="window.location.href='index.html'" class="btn-nav">Back to Workshop</button>
+        </div>
+
+        <div class="insights-grid">
+            <div class="stat-card" style="border-top: 3px solid var(--success);">
+                <h3 style="font-size:11px; text-transform:uppercase; color:var(--accent);">Unbilled Revenue (Ready)</h3>
+                <div class="big-val" id="readyRev">€0</div>
+                <small style="opacity:0.5;">Projected from 'Ready' stage</small>
+            </div>
+
+            <div class="stat-card">
+                <h3 style="font-size:11px; text-transform:uppercase; color:var(--accent);">7-Day Completed Trend</h3>
+                <div style="height: 120px;"><canvas id="trendChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Job Count</th>
+                        <th>Estimated Value (IE)</th>
+                    </tr>
+                </thead>
+                <tbody id="insightTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({
+        apiKey: "AIzaSyD9cPmUCMEtT7XukcAxmeS50jKh1A2f31Q",
+        projectId: "auto-care-plus-e7fdf"
+    }));
+
+    const PRICING = { GENERAL: 280, MECHANICAL: 450, DIAGNOSTIC: 75 };
+
+    window.unlockInsights = async () => {
+        const input = document.getElementById('adminKey').value;
+        const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+        const hex = Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // ADMIN KEY VERIFICATION
+        if (hex === "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4") {
+            document.getElementById('adminLock').style.display = 'none';
+            document.getElementById('insightsContent').style.display = 'block';
+            startIntelligence();
+        } else {
+            document.getElementById('error').style.display = 'block';
+        }
+    };
+
+    function startIntelligence() {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: ['M','T','W','T','F','S','S'], datasets: [{ data: [12, 19, 15, 22, 18, 10, 5], borderColor: '#00d2ff', tension: 0.4 }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+        });
+
+        onSnapshot(collection(db, "jobs"), (snap) => {
+            let total = 0;
+            let cats = { GENERAL: 0, MECHANICAL: 0, DIAGNOSTIC: 0 };
+            
+            snap.forEach(d => {
+                const j = d.data();
+                const status = (j.status || "").toUpperCase();
+                const type = (j.serviceType || "").toLowerCase();
+                
+                let cat = "GENERAL";
+                if(type.includes("brake") || type.includes("repair")) cat = "MECHANICAL";
+                if(type.includes("scan") || type.includes("diag")) cat = "DIAGNOSTIC";
+
+                if(status === "READY") total += PRICING[cat];
+                cats[cat]++;
+            });
+
+            document.getElementById("readyRev").innerText = "€" + total.toLocaleString();
+            document.getElementById("insightTable").innerHTML = Object.keys(cats).map(k => `
+                <tr>
+                    <td style="font-weight:700;">${k}</td>
+                    <td>${cats[k]} Jobs</td>
+                    <td>€${(cats[k] * PRICING[k]).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        });
+    }
+</script>
+</body>
+</html>
