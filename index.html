@@ -2,29 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AutoCare Plus | Business Intelligence</title>
+    <title>AutoCare Plus | Insights Command</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --accent: #00d2ff; --glass: rgba(10, 15, 28, 0.96); --bg: #020617;
             --success: #39ff14; --warning: #f59e0b; --danger: #ff3131; --border: rgba(255, 255, 255, 0.12);
         }
         body { background: var(--bg); color: white; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
-        
         .header { padding: 20px 40px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(2,6,23,0.9); }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; padding: 30px; }
-        
-        .kpi-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; position: relative; }
+        .kpi-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; }
         .kpi-card h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin: 0; }
         .kpi-val { font-size: 36px; font-weight: 800; margin: 15px 0 5px; }
-        
-        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { text-align: left; font-size: 11px; color: var(--accent); padding: 15px; border-bottom: 1px solid var(--border); }
-        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        
-        .back-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 10px 20px; border-radius: 10px; cursor: pointer; text-decoration: none; font-size: 12px; font-weight: 700; }
+        .delay-alert { background: rgba(255, 49, 49, 0.1); color: var(--danger); padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; margin-top: 10px; display: none; }
+        .back-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 10px 20px; border-radius: 10px; cursor: pointer; text-decoration: none; font-size: 12px; font-weight: 700; transition: 0.3s; }
         .back-btn:hover { background: var(--accent); color: black; }
     </style>
 </head>
@@ -32,46 +25,37 @@
 
     <div class="header">
         <div>
-            <h1 style="margin:0; font-size:22px;">Business Intelligence</h1>
-            <span style="font-size:9px; color:var(--success);">● REAL-TIME PERFORMANCE TRACKING</span>
+            <h1 style="margin:0; font-size:22px;">AutoCare Plus Insights</h1>
+            <span style="font-size:9px; color:var(--success);">● COLLECTION VELOCITY ACTIVE</span>
         </div>
         <a href="index.html" class="back-btn">Back to Workshop</a>
     </div>
 
     <div class="grid">
         <div class="kpi-card">
-            <h3>Workflow Value (Uncollected)</h3>
-            <div class="kpi-val" id="pipeRev">€0</div>
-            <p style="font-size:11px; opacity:0.6;">Total value of New, Servicing, and Ready jobs</p>
+            <h3>Accomplished Revenue</h3>
+            <div class="kpi-val" id="accomplishedVal">€0</div>
+            <p style="font-size:11px; opacity:0.6;">Value waiting in Ready lane</p>
+            <div id="velocityAlert" class="delay-alert">⚠️ COLLECTION DELAY: <span id="delayCount">0</span> Vehicles > 4hrs</div>
         </div>
 
         <div class="kpi-card">
-            <h3>Critical Delay Rate</h3>
-            <div class="kpi-val" id="delayCount" style="color:var(--danger);">0</div>
-            <p style="font-size:11px; opacity:0.6;">Jobs exceeding the 6-hour threshold</p>
+            <h3>Monthly Forecast</h3>
+            <div class="kpi-val" id="monthlyForecast" style="color:var(--success);">€0</div>
+            <p style="font-size:11px; opacity:0.6;">Projected monthly total</p>
         </div>
 
         <div class="kpi-card">
-            <h3>Priority Ratio</h3>
-            <div class="kpi-val" id="prioPerc">0%</div>
-            <p style="font-size:11px; opacity:0.6;">Percentage of starred priority tasks</p>
+            <h3>Target Progress</h3>
+            <div class="kpi-val" id="targetPerc">0%</div>
+            <p style="font-size:11px; opacity:0.6;">Of €15,000 Monthly Goal</p>
         </div>
     </div>
 
-    <div style="padding: 0 30px;">
+    <div style="padding: 0 30px 30px;">
         <div class="kpi-card">
-            <h3>Lane Efficiency Analysis</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Lane Status</th>
-                        <th>Active Count</th>
-                        <th>Estimated Value</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="laneStats"></tbody>
-            </table>
+            <h3>Accomplishment Value Trend</h3>
+            <div style="height: 250px;"><canvas id="revenueChart"></canvas></div>
         </div>
     </div>
 
@@ -84,52 +68,73 @@
         projectId: "auto-care-plus-e7fdf"
     }));
 
-    const RATES = { GENERAL: 280, MECHANICAL: 450, DIAGNOSTIC: 75 };
+    const PRICING = { GENERAL: 280, MECHANICAL: 450, DIAGNOSTIC: 75 };
+    const MONTHLY_TARGET = 15000;
+
+    function initChart() {
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        window.revChart = new Chart(ctx, {
+            type: 'bar',
+            data: { 
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4 (Est)'], 
+                datasets: [{ 
+                    label: 'Revenue €', 
+                    data: [2800, 3100, 2750, 3400], 
+                    backgroundColor: '#00d2ff',
+                    borderRadius: 8
+                }] 
+            },
+            options: { 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } }, 
+                scales: { 
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#fff' } },
+                    x: { grid: { display: false }, ticks: { color: '#fff' } }
+                } 
+            }
+        });
+    }
 
     onSnapshot(collection(db, "jobs"), (snap) => {
-        let totalVal = 0;
-        let prioCount = 0;
-        let delayCount = 0;
-        let lanes = { NEW: 0, SERVICING: 0, READY: 0, COLLECTED: 0 };
-        let laneVals = { NEW: 0, SERVICING: 0, READY: 0, COLLECTED: 0 };
+        let readyRevenue = 0;
+        let delayedCollections = 0;
+        let totalActiveJobs = 0;
 
         snap.forEach(d => {
             const j = d.data();
-            const stage = (j.status || "NEW").toUpperCase();
-            const type = (j.serviceType || "").toLowerCase();
+            const status = (j.status || "NEW").toUpperCase();
             
-            // Calculate Value
-            let val = RATES.GENERAL;
-            if(type.includes("brake") || type.includes("clutch")) val = RATES.MECHANICAL;
-            if(type.includes("scan") || type.includes("diag")) val = RATES.DIAGNOSTIC;
-
-            if(stage !== "COLLECTED") {
-                totalVal += val;
-                lanes[stage]++;
-                laneVals[stage] += val;
-                if(j.isPriority) prioCount++;
+            if(status === "READY") {
+                readyRevenue += PRICING.GENERAL;
                 
-                // Track 6hr Delays
-                const mins = j.createdAt ? (new Date() - j.createdAt.toDate()) / 60000 : 0;
-                if(mins >= 360) delayCount++;
+                // Collection Delay Logic: Ready for > 4 hours
+                if (j.createdAt) {
+                    const readyMins = (new Date() - j.createdAt.toDate()) / 60000;
+                    if (readyMins > 240) delayedCollections++;
+                }
             }
+            if(status !== "COLLECTED") totalActiveJobs++;
         });
 
-        const totalActive = snap.size - lanes.COLLECTED;
-        
-        document.getElementById("pipeRev").innerText = "€" + totalVal.toLocaleString();
-        document.getElementById("delayCount").innerText = delayCount;
-        document.getElementById("prioPerc").innerText = totalActive > 0 ? Math.round((prioCount / totalActive) * 100) + "%" : "0%";
+        const dailyAvg = (totalActiveJobs * 280) / 7;
+        const projectedMonthly = Math.round(dailyAvg * 30);
+        const achievement = Math.round((projectedMonthly / MONTHLY_TARGET) * 100);
 
-        document.getElementById("laneStats").innerHTML = Object.keys(lanes).filter(l => l !== 'COLLECTED').map(l => `
-            <tr>
-                <td><b>${l}</b></td>
-                <td>${lanes[l]} Units</td>
-                <td>€${laneVals[l].toLocaleString()}</td>
-                <td><span class="status-dot" style="background:${lanes[l] > 5 ? 'var(--danger)' : 'var(--success)'}"></span> ${lanes[l] > 5 ? 'High Load' : 'Stable'}</td>
-            </tr>
-        `).join('');
+        document.getElementById("accomplishedVal").innerText = "€" + readyRevenue.toLocaleString();
+        document.getElementById("monthlyForecast").innerText = "€" + projectedMonthly.toLocaleString();
+        document.getElementById("targetPerc").innerText = achievement + "%";
+
+        // Handle Alerts
+        const alertBox = document.getElementById("velocityAlert");
+        if (delayedCollections > 0) {
+            alertBox.style.display = "block";
+            document.getElementById("delayCount").innerText = delayedCollections;
+        } else {
+            alertBox.style.display = "none";
+        }
     });
+
+    initChart();
 </script>
 </body>
 </html>
